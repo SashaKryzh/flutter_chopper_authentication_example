@@ -27,7 +27,7 @@ class AuthRepository {
 // Fake remote server
 //
 
-// Will the remote server return a new valid token OR not
+// Will or will not the remote server return a new valid token
 final isAbleToRefreshToken = ValueNotifier(true);
 
 @Riverpod(keepAlive: true)

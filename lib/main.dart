@@ -41,7 +41,7 @@ class MainApp extends ConsumerWidget {
                 child: const Text('Invalidate token on remote server'),
               ),
               const SizedBox(height: 16),
-              // Will the remote server return a new valid token OR not
+              // Button to set if the remote server will or will not return a new valid token
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
