@@ -20,8 +20,10 @@ abstract class ApiService extends ChopperService {
   static ApiService create(ApiServiceRef ref) {
     final client = ChopperClient(
       client: mockClient(ref),
+      // Authenticator
       authenticator: ref.read(myAuthenticatorProvider),
       interceptors: [
+        // Authorization header interceptor
         ref.read(authInterceptorProvider),
       ],
       services: [
@@ -37,9 +39,12 @@ abstract class ApiService extends ChopperService {
       (request) async {
         await Future.delayed(const Duration(seconds: 1));
 
+        // Get currently valid token from remote server
         final serverAccessToken =
             ref.read(fakeRemoteServerProvider).accessToken;
 
+        // 1. If accessToken in the request doesn't match the token on the remote server,
+        //    then return 401
         if (request.headers[HttpHeaders.authorizationHeader] !=
             serverAccessToken) {
           return http.Response(
@@ -48,6 +53,7 @@ abstract class ApiService extends ChopperService {
           );
         }
 
+        // 2. If tokens are equal, then return some fake data
         return http.Response(
           'Some fake data',
           200,
@@ -76,16 +82,19 @@ class AuthInterceptor implements RequestInterceptor {
 
   @override
   FutureOr<Request> onRequest(Request request) {
-    print(
-      '[AuthInterceptor] accessToken: ${ref.read(authRepositoryProvider).accessToken}',
-    );
-
-    return applyHeader(
+    final updatedRequest = applyHeader(
       request,
       HttpHeaders.authorizationHeader,
       ref.read(authRepositoryProvider).accessToken,
+      // Do not override existing header
       override: false,
     );
+
+    print(
+      '[AuthInterceptor] accessToken: ${updatedRequest.headers[HttpHeaders.authorizationHeader]}',
+    );
+
+    return updatedRequest;
   }
 }
 
@@ -118,7 +127,9 @@ class MyAuthenticator implements Authenticator {
     if (response.statusCode == HttpStatus.unauthorized) {
       // Trying to update token only 1 time
       if (request.headers['Retry-Count'] != null) {
-        print('[MyAuthenticator] Unable to refresh token, retry count exceeded');
+        print(
+          '[MyAuthenticator] Unable to refresh token, retry count exceeded',
+        );
         return null;
       }
 
@@ -128,6 +139,7 @@ class MyAuthenticator implements Authenticator {
         request,
         {
           HttpHeaders.authorizationHeader: newToken,
+          // Setting the retry count to not end up in an infinite loop of unsuccessful updates
           'Retry-Count': '1',
         },
       );
@@ -136,6 +148,7 @@ class MyAuthenticator implements Authenticator {
     return null;
   }
 
+  // Completer to prevent multiple token refreshes at the same time
   Completer<String>? _completer;
 
   Future<String> _refreshToken() {
@@ -150,6 +163,7 @@ class MyAuthenticator implements Authenticator {
 
     ref.read(authRepositoryProvider).refreshToken().then((_) {
       final newToken = ref.read(authRepositoryProvider).accessToken;
+      // Completing the future with a new token
       completer?.complete(newToken);
     });
 

@@ -26,12 +26,14 @@ class MainApp extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Button to emulate network request
               ElevatedButton(
                 onPressed: () {
                   ref.read(apiServiceProvider).getData();
                 },
                 child: const Text('Get data'),
               ),
+              // Button to emulate token invalidation on remote server
               OutlinedButton(
                 onPressed: () {
                   ref.read(fakeRemoteServerProvider).invalidateToken();
@@ -39,6 +41,7 @@ class MainApp extends ConsumerWidget {
                 child: const Text('Invalidate token on remote server'),
               ),
               const SizedBox(height: 16),
+              // Will the remote server return a new valid token OR not
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
