@@ -1,10 +1,12 @@
-# Flutter Chopper authentication example with retry on 401 (Unauthorized)
+# Flutter Chopper authentication example with retry on 401 Unauthorized
 
-The title speaks for itself.
+![Flutter Chopper authentication example with retry on 401 Unauthorized](thumbnail.png)
 
-**⭐️ Article on Medium** (TODO: add link)
+How to add an HTTP Authorization header to the Chopper requests using interceptor and how to refresh token and retry requests in case of 401 Unauthorized response.
 
-## Structure
+**[⭐️ Article on Medium](https://medium.com/@alexandersnotes/flutter-chopper-authentication-retry-on-401-unauthorized-e0128fb0a7d)**
+
+## Files navigation
 
 - [main.dart](lib/main.dart) - basic UI.
 - [chopper.dart](lib/chopper.dart) - Chopper client, auth header interceptor, and Authenticator for retry on 401 (Unauthorized).
