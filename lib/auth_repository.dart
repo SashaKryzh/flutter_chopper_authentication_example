@@ -5,6 +5,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_repository.g.dart';
 
+// Will or will not throw exception on refreshToken()
+final isToThrowExceptionOnRefresh = ValueNotifier(false);
+
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(AuthRepositoryRef ref) {
   return AuthRepository(ref.watch(fakeRemoteServerProvider));
@@ -19,6 +22,9 @@ class AuthRepository {
   String get accessToken => _accessToken;
 
   Future<void> refreshToken() async {
+    if (isToThrowExceptionOnRefresh.value) {
+      throw Exception('Unable to refresh token');
+    }
     _accessToken = await _fakeRemoteServer.getNewToken();
   }
 }

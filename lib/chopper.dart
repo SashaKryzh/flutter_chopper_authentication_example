@@ -56,7 +56,7 @@ abstract class ApiService extends ChopperService {
 
         // 2. If tokens are equal, then return some fake data
         return http.Response(
-          'Some fake data',
+          'Success',
           200,
         );
       },

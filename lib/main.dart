@@ -28,8 +28,9 @@ class MainApp extends ConsumerWidget {
             children: [
               // Button to emulate network request
               ElevatedButton(
-                onPressed: () {
-                  ref.read(apiServiceProvider).getData();
+                onPressed: () async {
+                  final result = await ref.read(apiServiceProvider).getData();
+                  print(result.bodyString);
                 },
                 child: const Text('Get data'),
               ),
@@ -52,6 +53,22 @@ class MainApp extends ConsumerWidget {
                       value: value,
                       onChanged: (value) {
                         isAbleToRefreshToken.value = value;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              // Button to set if the auth repository will or will not throw an exception on refresh
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Is to throw Exception on refresh: '),
+                  ValueListenableBuilder(
+                    valueListenable: isToThrowExceptionOnRefresh,
+                    builder: (context, value, _) => Switch(
+                      value: value,
+                      onChanged: (value) {
+                        isToThrowExceptionOnRefresh.value = value;
                       },
                     ),
                   ),
