@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part "chopper.chopper.dart";
+part 'chopper.chopper.dart';
 part 'chopper.g.dart';
 
 @Riverpod(keepAlive: true)
@@ -23,7 +23,7 @@ abstract class ApiService extends ChopperService {
       // Authenticator
       authenticator: ref.read(myAuthenticatorProvider),
       interceptors: [
-        // Authorization header interceptor
+        // AuthInterceptor
         ref.read(authInterceptorProvider),
       ],
       services: [
@@ -35,6 +35,7 @@ abstract class ApiService extends ChopperService {
   }
 
   static MockClient mockClient(ApiServiceRef ref) {
+    // Returns data if the token is valid or 401 otherwise
     return MockClient(
       (request) async {
         await Future.delayed(const Duration(seconds: 1));
@@ -72,20 +73,20 @@ abstract class ApiService extends ChopperService {
 
 @riverpod
 AuthInterceptor authInterceptor(AuthInterceptorRef ref) {
-  return AuthInterceptor(ref);
+  return AuthInterceptor(ref.watch(authRepositoryProvider));
 }
 
 class AuthInterceptor implements RequestInterceptor {
-  const AuthInterceptor(this.ref);
+  const AuthInterceptor(this._repo);
 
-  final AuthInterceptorRef ref;
+  final AuthRepository _repo;
 
   @override
   FutureOr<Request> onRequest(Request request) {
     final updatedRequest = applyHeader(
       request,
       HttpHeaders.authorizationHeader,
-      ref.read(authRepositoryProvider).accessToken,
+      _repo.accessToken,
       // Do not override existing header
       override: false,
     );
@@ -104,13 +105,13 @@ class AuthInterceptor implements RequestInterceptor {
 
 @riverpod
 MyAuthenticator myAuthenticator(MyAuthenticatorRef ref) {
-  return MyAuthenticator(ref);
+  return MyAuthenticator(ref.watch(authRepositoryProvider));
 }
 
 class MyAuthenticator implements Authenticator {
-  MyAuthenticator(this.ref);
+  MyAuthenticator(this._repo);
 
-  final MyAuthenticatorRef ref;
+  final AuthRepository _repo;
 
   @override
   FutureOr<Request?> authenticate(
@@ -120,7 +121,7 @@ class MyAuthenticator implements Authenticator {
   ]) async {
     print('[MyAuthenticator] response.statusCode: ${response.statusCode}');
     print(
-      '[MyAuthenticator] request Retry-Count: ${request.headers['Retry-Count']}',
+      '[MyAuthenticator] request Retry-Count: ${request.headers['Retry-Count'] ?? 0}',
     );
 
     // 401
@@ -133,16 +134,21 @@ class MyAuthenticator implements Authenticator {
         return null;
       }
 
-      final newToken = await _refreshToken();
+      try {
+        final newToken = await _refreshToken();
 
-      return applyHeaders(
-        request,
-        {
-          HttpHeaders.authorizationHeader: newToken,
-          // Setting the retry count to not end up in an infinite loop of unsuccessful updates
-          'Retry-Count': '1',
-        },
-      );
+        return applyHeaders(
+          request,
+          {
+            HttpHeaders.authorizationHeader: newToken,
+            // Setting the retry count to not end up in an infinite loop of unsuccessful updates
+            'Retry-Count': '1',
+          },
+        );
+      } catch (e) {
+        print('[MyAuthenticator] Unable to refresh token: $e');
+        return null;
+      }
     }
 
     return null;
@@ -161,10 +167,12 @@ class MyAuthenticator implements Authenticator {
     completer = Completer<String>();
     _completer = completer;
 
-    ref.read(authRepositoryProvider).refreshToken().then((_) {
-      final newToken = ref.read(authRepositoryProvider).accessToken;
-      // Completing the future with a new token
-      completer?.complete(newToken);
+    _repo.refreshToken().then((_) {
+      // Completing with a new token
+      completer?.complete(_repo.accessToken);
+    }).onError((error, stackTrace) {
+      // Completing with an error
+      completer?.completeError(error ?? 'Refresh token error', stackTrace);
     });
 
     return completer.future;
